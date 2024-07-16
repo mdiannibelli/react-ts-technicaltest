@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { User } from './types/user';
 import UserGrid from './components/UserGrid';
 
-const USER_QUANTITY = 100;
-const API_URL = `https://randomuser.me/api/?results=${USER_QUANTITY}`;
+const USER_QUANTITY = 10;
+const API_URL = `https://randomuser.me/api/?results=${USER_QUANTITY}&seed=dionel`;
 
 function App() {
   const [usernames, setUsernames] = useState<User[]>([]);
@@ -11,6 +11,7 @@ function App() {
   const [isColored, setIsColored] = useState(false);
   const [isOrderByCountries, setIsOrderByCountries] = useState(false);
   const [searchValue, setSearchValue] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const usersCopy = useRef<User[]>([]);
 
@@ -19,17 +20,20 @@ function App() {
     const getUsernames = async () => {
       try {
         setIsLoading(true);
-        const res = await fetch(API_URL);
+        const res = await fetch(`${API_URL}&page=${currentPage}`);
         const data = await res.json();
-        setUsernames(data.results);
-        usersCopy.current = data.results;
+        setUsernames(prevState => {
+          const newUsers = prevState.concat(data.results);
+          usersCopy.current = data.results;
+          return newUsers;
+        });
         setIsLoading(false);
       } catch (error) {
         throw new Error('Error at fetching API.');
       }
     };
     getUsernames();
-  }, []);
+  }, [currentPage]);
 
   // Toggle Color
   const toggleColor = () => {
@@ -85,7 +89,9 @@ function App() {
           <input className='select-none outline-none border-[1px] border-slate-700 rounded-md bg-slate-800 p-2' type="text" placeholder='Search country..' onChange={(e) => handleChangeValue(e)} />
         </header>
         <div className='w-full p-4'>
-          {isLoading === true ? <p className='flex justify-center items-center text-xl text-white'>Loading...</p> : <UserGrid usernames={sortedUsernames} isColored={isColored} deleteUserById={deleteUserById} />}
+          {usernames.length > 0 && <UserGrid usernames={sortedUsernames} isColored={isColored} deleteUserById={deleteUserById} />}
+          {isLoading === true && <p className='flex justify-center items-center text-xl text-white'>Loading...</p>}
+          {!isLoading && <button className='max-w-xl flex mt-4 mx-auto p-2 border-[1px] rounded hover:bg-cyan-500 duration-300' onClick={() => setCurrentPage(currentPage + 1)}>Load more results.</button>}
         </div>
       </main>
     </>
